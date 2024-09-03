@@ -1,17 +1,22 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import FastAPI, Request, File, UploadFile, HTTPException
+from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
 import shutil
 import os
 import pandas as pd
 from datetime import date
 import re
+import traceback
 
 # 터미널에 uvicorn main:app --reload 로 실행
 app = FastAPI()
 
-# Serve static files
+# 정적 파일 서빙 설정
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 템플릿 설정
+templates = Jinja2Templates(directory="templates")
 
 def reason_preprocessing(text):
     if "클릭베이트" in text:
@@ -72,11 +77,12 @@ def process_files(file_paths):
     return output_file
 
 @app.post("/uploadfiles/")
-async def create_upload_files(files: list[UploadFile] = File(...)):
+async def create_upload_files(request: Request, files: list[UploadFile] = File(...)):
     try:
         file_paths = []
         for file in files:
-            file_path = file.filename
+            file_path = os.path.join("temp", file.filename)  # 'temp' 디렉토리에 파일 저장
+            os.makedirs("temp", exist_ok=True)  # 'temp' 디렉토리가 없으면 생성
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             file_paths.append(file_path)
@@ -88,19 +94,11 @@ async def create_upload_files(files: list[UploadFile] = File(...)):
             os.remove(file_path)
         
         download_link = f'/download/{processed_file}'
-        return HTMLResponse(content=f"""
-        <html>
-            <body>
-                <h1>처리가 완료되었습니다.</h1>
-                <p>아래 버튼을 클릭하여 결과 파일을 다운로드하세요:</p>
-                <a href="{download_link}" download>
-                    <button>다운로드</button>
-                </a>
-            </body>
-        </html>
-        """)
+        return templates.TemplateResponse("result.html", {"request": request, "download_link": download_link})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"An error occurred: {str(e)}")
+        print(traceback.format_exc())  # 상세한 오류 트레이스백 출력
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 @app.get("/download/{filename}")
 async def download_file(filename: str):
@@ -109,22 +107,8 @@ async def download_file(filename: str):
     raise HTTPException(status_code=404, detail="File not found")
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root():
-    html_content = """
-    <html>
-        <head>
-            <title>File Processor</title>
-        </head>
-        <body>
-            <h1>Upload CSV Files</h1>
-            <form action="/uploadfiles/" enctype="multipart/form-data" method="post">
-                <input name="files" type="file" accept=".csv" multiple>
-                <input type="submit" value="Upload and Process">
-            </form>
-        </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 if __name__ == "__main__":
     import uvicorn

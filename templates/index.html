@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구글 리젝 처리기</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+</head>
+<body>
+    <h1>파일을 업로드 해주세요!</h1>
+    <form action="/uploadfiles/" enctype="multipart/form-data" method="post">
+        <input name="files" type="file" accept=".csv" multiple>
+        <input type="submit" value="처리하기">
+    </form>
+    <script src="{{ url_for('static', path='/js/script.js') }}"></script>
+</body>
+</html>

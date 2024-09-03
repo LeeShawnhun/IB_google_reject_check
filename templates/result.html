@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>구글 리젝 처리기</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+</head>
+<body>
+    <h1>처리가 완료되었습니다</h1>
+    <p>아래 버튼을 클릭하여 결과 파일을 다운로드하세요:</p>
+    <a href="{{ download_link }}" download>
+        <button>다운로드</button>
+    </a>
+    <br><br>
+    <a href="/">처음으로 돌아가기</a>
+    <script src="{{ url_for('static', path='/js/script.js') }}"></script>
+</body>
+</html>
