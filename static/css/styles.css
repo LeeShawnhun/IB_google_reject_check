@@ -1,52 +1,142 @@
 body {
-    font-family: Arial, sans-serif;
-    max-width: 800px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 40px;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
 }
 
 h1 {
-    color: #333;
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.content-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.main-content {
+    flex: 1;
+    margin-right: 40px;
 }
 
 form {
-    margin-top: 20px;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 input[type="file"] {
-    margin-bottom: 10px;
+    margin-bottom: 20px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
 
 input[type="submit"] {
-    background-color: #4CAF50;
+    background-color: #3498db;
     color: white;
-    padding: 10px 15px;
+    padding: 12px 20px;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    display: block;
+    margin-left: auto;
+    margin-right: 0;
 }
 
 input[type="submit"]:hover {
-    background-color: #45a049;
+    background-color: #2980b9;
 }
 
-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 15px;
-    border: none;
-    cursor: pointer;
+.form-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-content {
+    margin-bottom: 20px;
+}
+
+.team-selection {
+    margin-bottom: 30px;
+}
+
+.team-selection h2 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.team-selection input[type="radio"] {
+    display: none;
+}
+
+.team-selection label {
+    display: inline-block;
+    background-color: #ecf0f1;
+    padding: 10px 20px;
     font-size: 16px;
+    border-radius: 4px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-button:hover {
-    background-color: #45a049;
+.team-selection input[type="radio"]:checked + label {
+    background-color: #3498db;
+    color: white;
 }
 
-a {
-    color: #1a73e8;
-    text-decoration: none;
+.file-upload {
+    margin-bottom: 20px;
 }
 
-a:hover {
-    text-decoration: underline;
+#file-list {
+    margin-top: 10px;
+}
+
+#file-list div {
+    background-color: #ecf0f1;
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.brand-list {
+    flex: 0 0 300px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.brand-list h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.brand-list ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.brand-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.brand-list li:last-child {
+    border-bottom: none;
 }

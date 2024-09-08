@@ -3,15 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>구글 리젝 처리기</title>
+    <title>IB</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
 </head>
 <body>
-    <h1>파일을 업로드 해주세요!</h1>
-    <form action="/uploadfiles/" enctype="multipart/form-data" method="post">
-        <input name="files" type="file" accept=".csv" multiple>
-        <input type="submit" value="처리하기">
-    </form>
+    <h1>퍼포먼스마케팅팀 구글 리젝 처리기</h1>
+    <div class="content-wrapper">
+        <div class="main-content">
+            <form action="/uploadfiles/" enctype="multipart/form-data" method="post">
+                <div class="form-container">
+                    <div class="form-content">
+                        <div class="team-selection">
+                            <h2>팀 선택</h2>
+                            <input type="radio" id="team1" name="selected_team" value="team1" required>
+                            <label for="team1">1팀</label>
+
+                            <input type="radio" id="team2A" name="selected_team" value="team2A">
+                            <label for="team2A">2팀A</label>
+
+                            <input type="radio" id="team2B" name="selected_team" value="team2B">
+                            <label for="team2B">2팀B</label>
+
+                            <input type="radio" id="team3" name="selected_team" value="team3">
+                            <label for="team3">3팀</label>
+
+                            <input type="radio" id="team4" name="selected_team" value="team4">
+                            <label for="team4">4팀</label>
+                        </div>
+
+                        <div class="file-upload">
+                            <input name="files" type="file" accept=".csv" multiple id="file-input">
+                            <div id="file-list"></div>
+                        </div>
+                    </div>
+                    <input type="submit" value="처리하기">
+                </div>
+            </form>
+        </div>
+        <div id="brand-list" class="brand-list"></div>
+    </div>
+
     <script src="{{ url_for('static', path='/js/script.js') }}"></script>
 </body>
 </html>

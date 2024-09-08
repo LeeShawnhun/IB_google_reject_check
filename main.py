@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, File, UploadFile, HTTPException
+from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
@@ -17,6 +17,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 템플릿 설정
 templates = Jinja2Templates(directory="templates")
+
+team_brands = {
+    "team1": ['비아벨로', '라이브포레스트', '겟비너스', '본투비맨', '마스터벤', '안마디온', '다트너스', '뮤끄', '프렌냥'],
+    "team2A": ['해피토리', '뉴티365', '디다', '아비토랩'],
+    "team2B": ['씨퓨리', '리베니프', '리디에뜨', '에르보떼'],
+    "team3": ['하아르', '리서쳐스', '리프비기닝', '리서쳐스포우먼', '아르다오'],
+    "team4": ['베다이트', '데이배리어', '리프비기닝', '건강도감', '리서쳐스']
+}
 
 def reason_preprocessing(text):
     if "클릭베이트" in text:
@@ -77,7 +85,7 @@ def process_files(file_paths):
     return output_file
 
 @app.post("/uploadfiles/")
-async def create_upload_files(request: Request, files: list[UploadFile] = File(...)):
+async def create_upload_files(request: Request, files: list[UploadFile] = File(...), selected_team: str = Form(...)):
     try:
         file_paths = []
         for file in files:
@@ -87,7 +95,19 @@ async def create_upload_files(request: Request, files: list[UploadFile] = File(.
                 shutil.copyfileobj(file.file, buffer)
             file_paths.append(file_path)
         
-        processed_file = process_files(file_paths)
+        # 선택된 팀의 브랜드 순서 가져오기
+        team_brands_list = team_brands.get(selected_team, [])
+        
+        # 파일 경로를 브랜드 순서에 따라 정렬
+        sorted_file_paths = []
+        for brand in team_brands_list:
+            for file_path in file_paths:
+                if f"_{brand}.csv" in file_path:
+                    sorted_file_paths.append(file_path)
+                    break
+        
+        # 정렬된 파일 경로로 처리
+        processed_file = process_files(sorted_file_paths)
         
         # Clean up uploaded files
         for file_path in file_paths:
