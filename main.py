@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, Request, File, UploadFile, HTTPException, Form, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
@@ -8,6 +8,9 @@ import pandas as pd
 from datetime import date
 import re
 import traceback
+from sqlalchemy.orm import Session
+from database import get_db, engine 
+import models
 
 # 터미널에 uvicorn main:app --reload 로 실행
 app = FastAPI()
@@ -17,6 +20,24 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 템플릿 설정
 templates = Jinja2Templates(directory="templates")
+
+# db 테이블 초기화
+models.Base.metadata.create_all(bind=engine)
+
+def save_to_database(db: Session, processed_data):
+    today = date.today()
+    for campaign, ads in processed_data.items():
+        for ad in ads:
+            name, reasons = ad.split('(', 1)
+            reasons = reasons.rstrip(')')
+            db_item = models.RejectedAd(
+                date=today,
+                campaign=campaign,
+                ad_name=name,
+                reasons=reasons
+            )
+            db.add(db_item)
+    db.commit()
 
 team_brands = {
     "team1": ['비아벨로', '라이브포레스트', '겟비너스', '본투비맨', '마스터벤', '안마디온', '다트너스', '뮤끄', '프렌냥'],
@@ -45,17 +66,17 @@ def reason_preprocessing(text):
 def process_files(file_paths):
     today = date.today()
     formatted_date = today.strftime("%m%d")
-    all_brand_data = []
+    processed_data = {}
 
     for file_path in file_paths:
         temp = pd.read_csv(
             file_path, 
             encoding="UTF-16",
             sep='\t',
-            usecols=['광고 이름', '광고 유형', '캠페인', '광고 정책'],
+            usecols=['광고 이름', '광고 유형', '캠페인', '승인 상태','광고 정책'],
             header=2)
         
-        temp = temp[temp["광고 유형"] == "반응형 동영상 광고"]
+        temp = temp[(temp["광고 유형"] == "반응형 동영상 광고") & (temp["승인 상태"] != "승인됨")]
         temp_campaign_name = temp["캠페인"].unique()
         
         for campaign in temp_campaign_name:
@@ -73,19 +94,21 @@ def process_files(file_paths):
             duplicate_check = pd.DataFrame(temp_list)
             reject_ads = duplicate_check[0].unique()
             
-            all_brand_data.append(f"{campaign}")
-            all_brand_data.extend(reject_ads)
-            all_brand_data.append("")
+            processed_data[campaign] = reject_ads
 
     output_file = f'{formatted_date} 구글 리젝 체크.txt'
+
     with open(output_file, 'w', encoding='utf-8') as file:
-        for line in all_brand_data:
-            file.write(f"{line}\n")
+        for campaign, ads in processed_data.items():
+            file.write(f"{campaign}\n")
+            for ad in ads:
+                file.write(f"{ad}\n")
+            file.write("\n")
     
-    return output_file
+    return processed_data, output_file
 
 @app.post("/uploadfiles/")
-async def create_upload_files(request: Request, files: list[UploadFile] = File(...), selected_team: str = Form(...)):
+async def create_upload_files(request: Request, files: list[UploadFile] = File(...), selected_team: str = Form(...), db: Session = Depends(get_db)):
     try:
         file_paths = []
         for file in files:
@@ -107,17 +130,20 @@ async def create_upload_files(request: Request, files: list[UploadFile] = File(.
                     break
         
         # 정렬된 파일 경로로 처리
-        processed_file = process_files(sorted_file_paths)
+        processed_data, output_file = process_files(sorted_file_paths)
         
-        # Clean up uploaded files
+        # 데이터베이스에 저장
+        save_to_database(db, processed_data)
+        
         for file_path in file_paths:
             os.remove(file_path)
         
-        download_link = f'/download/{processed_file}'
+        download_link = f'/download/{output_file}'
         return templates.TemplateResponse("result.html", {"request": request, "download_link": download_link})
+    
     except Exception as e:
         print(f"An error occurred: {str(e)}")
-        print(traceback.format_exc())  # 상세한 오류 트레이스백 출력
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 @app.get("/download/{filename}")
@@ -129,6 +155,11 @@ async def download_file(filename: str):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/check_data/", response_class=HTMLResponse)
+def check_data(request: Request, db: Session = Depends(get_db)):
+    results = db.query(models.RejectedAd).all()
+    return templates.TemplateResponse("check_data.html", {"request": request, "results": results})
 
 if __name__ == "__main__":
     import uvicorn
