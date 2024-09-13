@@ -11,6 +11,7 @@ import traceback
 from sqlalchemy.orm import Session
 from database import get_db, engine 
 import models
+from collections import defaultdict
 
 # 터미널에 uvicorn main:app --reload 로 실행
 app = FastAPI()
@@ -24,7 +25,7 @@ templates = Jinja2Templates(directory="templates")
 # db 테이블 초기화
 models.Base.metadata.create_all(bind=engine)
 
-def save_to_database(db: Session, processed_data):
+def save_to_database(db: Session, processed_data, selected_team):
     today = date.today()
     for campaign, ads in processed_data.items():
         for ad in ads:
@@ -32,9 +33,10 @@ def save_to_database(db: Session, processed_data):
             reasons = reasons.rstrip(')')
             db_item = models.RejectedAd(
                 date=today,
+                team=selected_team,
                 campaign=campaign,
                 ad_name=name,
-                reasons=reasons
+                reasons=reasons,
             )
             db.add(db_item)
     db.commit()
@@ -107,21 +109,25 @@ def process_files(file_paths):
     
     return processed_data, output_file
 
+def preprocess_rejections(rejections):
+    grouped_rejections = defaultdict(list)
+    for campaign, ad_name, reasons in rejections:
+        grouped_rejections[campaign].append((ad_name, reasons))
+    return dict(grouped_rejections)
+
 @app.post("/uploadfiles/")
 async def create_upload_files(request: Request, files: list[UploadFile] = File(...), selected_team: str = Form(...), db: Session = Depends(get_db)):
     try:
         file_paths = []
         for file in files:
-            file_path = os.path.join("temp", file.filename)  # 'temp' 디렉토리에 파일 저장
-            os.makedirs("temp", exist_ok=True)  # 'temp' 디렉토리가 없으면 생성
+            file_path = os.path.join("temp", file.filename)
+            os.makedirs("temp", exist_ok=True)
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             file_paths.append(file_path)
         
-        # 선택된 팀의 브랜드 순서 가져오기
         team_brands_list = team_brands.get(selected_team, [])
         
-        # 파일 경로를 브랜드 순서에 따라 정렬
         sorted_file_paths = []
         for brand in team_brands_list:
             for file_path in file_paths:
@@ -129,17 +135,41 @@ async def create_upload_files(request: Request, files: list[UploadFile] = File(.
                     sorted_file_paths.append(file_path)
                     break
         
-        # 정렬된 파일 경로로 처리
         processed_data, output_file = process_files(sorted_file_paths)
         
-        # 데이터베이스에 저장
-        save_to_database(db, processed_data)
+        today_data = []
+        for campaign, ads in processed_data.items():
+            for ad in ads:
+                name, reasons = ad.split('(', 1)
+                reasons = reasons.rstrip(')')
+                today_data.append(models.RejectedAd(
+                    date=date.today(),
+                    campaign=campaign,
+                    ad_name=name,
+                    reasons=reasons,
+                    team=selected_team
+                ))
+        
+        yesterday_data = models.get_yesterday_rejections(db, selected_team)
+        
+        comparison = models.compare_rejections(today_data, yesterday_data)
+        
+        # 데이터 전처리
+        new_rejections = preprocess_rejections(comparison["new"])
+        resolved_rejections = preprocess_rejections(comparison["resolved"])
+        
+        save_to_database(db, processed_data, selected_team)
         
         for file_path in file_paths:
             os.remove(file_path)
         
         download_link = f'/download/{output_file}'
-        return templates.TemplateResponse("result.html", {"request": request, "download_link": download_link})
+        return templates.TemplateResponse("result.html", {
+            "request": request, 
+            "download_link": download_link,
+            "new_rejections": new_rejections,
+            "resolved_rejections": resolved_rejections
+        })
     
     except Exception as e:
         print(f"An error occurred: {str(e)}")
@@ -155,11 +185,6 @@ async def download_file(filename: str):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/check_data/", response_class=HTMLResponse)
-def check_data(request: Request, db: Session = Depends(get_db)):
-    results = db.query(models.RejectedAd).all()
-    return templates.TemplateResponse("check_data.html", {"request": request, "results": results})
 
 if __name__ == "__main__":
     import uvicorn

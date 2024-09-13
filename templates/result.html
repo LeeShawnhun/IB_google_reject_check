@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +12,43 @@
     <a href="{{ download_link }}" download>
         <button>다운로드</button>
     </a>
+
+    <h2>새로운 리젝</h2>
+    {% if new_rejections %}
+        <ul>
+        {% for campaign, ads in new_rejections.items() %}
+            <li>
+                <strong>{{ campaign }}</strong>
+                <ul>
+                {% for ad_name, reasons in ads %}
+                    <li>{{ ad_name }} ({{ reasons }})</li>
+                {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>새로운 리젝이 없습니다.</p>
+    {% endif %}
+
+    <h2>해결된 리젝</h2>
+    {% if resolved_rejections %}
+        <ul>
+        {% for campaign, ads in resolved_rejections.items() %}
+            <li>
+                <strong>{{ campaign }}</strong>
+                <ul>
+                {% for ad_name, reasons in ads %}
+                    <li>{{ ad_name }} ({{ reasons }})</li>
+                {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>해결된 리젝이 없습니다.</p>
+    {% endif %}
+
     <br><br>
     <a href="/">처음으로 돌아가기</a>
     <script src="{{ url_for('static', path='/js/script.js') }}"></script>
